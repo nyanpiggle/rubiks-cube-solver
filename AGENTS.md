@@ -29,9 +29,11 @@ Leave all three of these alone unless you are deliberately changing the publish:
 
 Clearing the website, turning Pages off, or making the repo private makes the card open GitHub (or disappear). Do not force-push `main`.
 
-## Publish Quarter again
+## Publish the phone link in the same turn
 
-Only when the web app changed. `main` is the source. `gh-pages` is the site.
+The phone never reads `main`. The card opens <https://nyanpiggle.github.io/rubiks-cube-solver/>, which is only the `gh-pages` branch. Pushing source to `main` and stopping leaves the phone on the previous cube.
+
+If you changed Quarter (anything under `src/` that the app renders, `public/`, or the Pages build), publishing `gh-pages` is part of finishing. Do it in the same turn, before you say the update is done. A docs-only change (`AGENTS.md`, `CLAUDE.md`, `README.md`) does not need a rebuild.
 
 ```bash
 GITHUB_PAGES=1 npm run build:pages
@@ -39,7 +41,9 @@ cp dist/client/index.html dist/client/404.html
 touch dist/client/.nojekyll
 ```
 
-Push the contents of `dist/client/` to `gh-pages`. `GITHUB_PAGES=1` sets Vite’s base to `/rubiks-cube-solver/` and prerenders `/` to `dist/client/index.html`. Without that flag the asset URLs are wrong on the user site and the page is blank. Do not commit `dist/`, `node_modules/`, or `.env`.
+Then replace `gh-pages` with the contents of `dist/client/` (force-push that branch only). `GITHUB_PAGES=1` sets Vite’s base to `/rubiks-cube-solver/` and prerenders `/` to `dist/client/index.html`. Without that flag the phone page is blank. Do not commit `dist/`, `node_modules/`, or `.env`. Do not force-push `main`. Do not merge `main` into `gh-pages`.
+
+Done means the live page’s script URL matches the new `dist/client/index.html`, not merely that `main` moved. If the live HTML is still the old hash, Pages has not caught up yet; check again before claiming the phone is current. A refresh on the phone picks up the new `index.html`.
 
 ## Cube model — do not “fix” the turn signs
 
