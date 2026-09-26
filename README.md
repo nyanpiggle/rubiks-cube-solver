@@ -2,6 +2,8 @@
 
 **[Open Quarter](https://nyanpiggle.github.io/rubiks-cube-solver/)** — the cube, in the browser. No install.
 
+Agents: read [AGENTS.md](AGENTS.md) before changing Quarter or how that link is published.
+
 Two ways to unscramble a 3×3.
 
 ## Quarter
