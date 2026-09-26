@@ -2,10 +2,66 @@ import { Copy, Pause, Play, RotateCcw, Shuffle, SkipForward, Undo2 } from "lucid
 import { useEffect, useRef, useState } from "react";
 import { FACES, isSolved, toFaceletString, tokenize, type Face } from "@/lib/cube/engine";
 import { useCube, type Speed } from "@/lib/cube/store";
+import { DIST_MAX, DIST_MIN, PITCH_MAX, PITCH_MIN, useView } from "@/lib/cube/view";
 import { CubeNet } from "./net";
 import { CubeStage } from "./cube-stage";
 
 const SPEEDS: Speed[] = [1, 2, 4];
+
+function wrapDegrees(radians: number): number {
+  const degrees = (radians * 180) / Math.PI;
+  return ((((degrees + 180) % 360) + 360) % 360) - 180;
+}
+
+function ViewControls() {
+  const yaw = useView((s) => s.yaw);
+  const pitch = useView((s) => s.pitch);
+  const distance = useView((s) => s.distance);
+  const zoomed = Math.round(((DIST_MAX - distance) / (DIST_MAX - DIST_MIN)) * 1000);
+  const pitchDeg = (pitch * 180) / Math.PI;
+  return (
+    <div className="view-controls">
+      <label className="view-row">
+        <span>Zoom</span>
+        <input
+          type="range"
+          min={0}
+          max={1000}
+          value={zoomed}
+          aria-label="Zoom. Left shows the whole cube, right moves closer."
+          onChange={(event) => {
+            const t = Number(event.target.value) / 1000;
+            useView.getState().setDistance(DIST_MAX - t * (DIST_MAX - DIST_MIN));
+          }}
+        />
+      </label>
+      <label className="view-row">
+        <span>Yaw</span>
+        <input
+          type="range"
+          min={-180}
+          max={180}
+          step={1}
+          value={Math.round(wrapDegrees(yaw))}
+          aria-label="Yaw. Rotates the whole cube left and right."
+          onChange={(event) => useView.getState().setYaw((Number(event.target.value) * Math.PI) / 180)}
+        />
+      </label>
+      <label className="view-row">
+        <span>Pitch</span>
+        <input
+          type="range"
+          min={Math.round((PITCH_MIN * 180) / Math.PI)}
+          max={Math.round((PITCH_MAX * 180) / Math.PI)}
+          step={1}
+          value={Math.round(pitchDeg)}
+          aria-label="Pitch. Tips the whole cube up and down. No tilt."
+          onChange={(event) => useView.getState().setPitch((Number(event.target.value) * Math.PI) / 180)}
+        />
+      </label>
+    </div>
+  );
+}
 
 export function Bench() {
   const history = useCube((s) => s.history);
@@ -250,6 +306,8 @@ export function Bench() {
           </div>
         </div>
 
+        <ViewControls />
+
         <div className="pad" aria-label="Face turns">
           {FACES.map((face) => (
             <div key={face} className="pad-col">
@@ -266,7 +324,7 @@ export function Bench() {
           ))}
         </div>
 
-        <p className="hint">Swipe rows and columns. Drag empty space to orbit. Keys U R F D L B, Shift for prime, Z undo, Space plays.</p>
+        <p className="hint">One finger turns a row or column. Two fingers yaw and pitch the whole cube. Keys U R F D L B, Shift for prime, Z undo, Space plays.</p>
       </section>
     </main>
   );

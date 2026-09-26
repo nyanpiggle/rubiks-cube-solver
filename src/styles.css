@@ -376,6 +376,34 @@ h1 {
   line-height: 1.45;
 }
 
+.view-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.view-row {
+  display: grid;
+  grid-template-columns: 3.25rem 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.view-row span {
+  color: var(--color-subtle);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.view-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-fg);
+  height: 28px;
+}
+
 @media (min-width: 960px) {
   .bench {
     flex-direction: row;

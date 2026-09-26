@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import type { OrbitControls as OrbitControlsImpl } from "three/addons/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import {
   BoxGeometry,
@@ -14,6 +13,7 @@ import {
 } from "three";
 import { decideTurn, parseMove, snapNormal, type Coord, type Face, type Piece } from "@/lib/cube/engine";
 import { useCube, type Speed } from "@/lib/cube/store";
+import { useView } from "@/lib/cube/view";
 
 const SIZE = 0.94;
 const STRIDE = 1.02;
@@ -94,7 +94,7 @@ export function PhysicalCube() {
   const shown = useRef<Piece[] | null>(null);
   const epochSeen = useRef(0);
   const anim = useRef<{ move: string; elapsed: number; duration: number; pieces: Piece[] } | null>(null);
-  const { camera, gl, controls } = useThree();
+  const { camera, gl } = useThree();
   const reducedRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -235,6 +235,7 @@ export function PhysicalCube() {
   useLayoutEffect(() => {
     const element = gl.domElement;
     const raycaster = new Raycaster();
+    const pointers = new Map<number, { x: number; y: number }>();
     let gesture: {
       pointerId: number;
       x: number;
@@ -244,12 +245,35 @@ export function PhysicalCube() {
       pz: Coord;
       normal: Face;
     } | null = null;
+    let orbit: { pointerId: number; x: number; y: number } | null = null;
+    let pair: { x: number; y: number } | null = null;
 
-    const orbit = () => controls as OrbitControlsImpl | null;
+    const height = () => element.getBoundingClientRect().height;
+
+    const midpoint = () => {
+      let x = 0;
+      let y = 0;
+      for (const point of pointers.values()) {
+        x += point.x;
+        y += point.y;
+      }
+      const n = pointers.size || 1;
+      return { x: x / n, y: y / n };
+    };
 
     const onDown = (event: PointerEvent) => {
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size >= 2) {
+        gesture = null;
+        orbit = null;
+        pair = midpoint();
+        return;
+      }
       const store = useCube.getState();
-      if (store.locked || store.mode !== "idle") return;
+      if (store.locked || store.mode !== "idle") {
+        orbit = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+        return;
+      }
       const rect = element.getBoundingClientRect();
       _pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       _pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -258,13 +282,17 @@ export function PhysicalCube() {
         nodes.current.map((node) => node.body),
         false,
       )[0];
-      if (!hit?.face) return;
+      if (!hit?.face) {
+        orbit = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+        return;
+      }
       _normal.copy(hit.face.normal).transformDirection(hit.object.matrixWorld);
       const normal = snapNormal(_normal);
       const data = hit.object.userData as { x?: number; y?: number; z?: number };
-      if (!normal || data.x === undefined || data.y === undefined || data.z === undefined) return;
-      const ctrl = orbit();
-      if (ctrl) ctrl.enabled = false;
+      if (!normal || data.x === undefined || data.y === undefined || data.z === undefined) {
+        orbit = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+        return;
+      }
       gesture = {
         pointerId: event.pointerId,
         x: event.clientX,
@@ -277,37 +305,57 @@ export function PhysicalCube() {
     };
 
     const onMove = (event: PointerEvent) => {
-      if (!gesture || event.pointerId !== gesture.pointerId) return;
-      const dx = event.clientX - gesture.x;
-      const dy = event.clientY - gesture.y;
-      if (dx * dx + dy * dy < 14 * 14) return;
-      _right.setFromMatrixColumn(camera.matrixWorld, 0);
-      _up.setFromMatrixColumn(camera.matrixWorld, 1);
-      _drag.copy(_right).multiplyScalar(dx).addScaledVector(_up, -dy);
-      const move = decideTurn(gesture.normal, { x: gesture.px, y: gesture.py, z: gesture.pz }, _drag);
-      if (!move) return;
-      gesture = null;
-      const ctrl = orbit();
-      if (ctrl) ctrl.enabled = true;
-      useCube.getState().enqueue([move]);
+      const point = pointers.get(event.pointerId);
+      if (!point) return;
+      point.x = event.clientX;
+      point.y = event.clientY;
+      if (pointers.size >= 2) {
+        gesture = null;
+        orbit = null;
+        const mid = midpoint();
+        if (pair) useView.getState().nudge(mid.x - pair.x, mid.y - pair.y, height());
+        pair = mid;
+        return;
+      }
+      if (gesture && event.pointerId === gesture.pointerId) {
+        const dx = event.clientX - gesture.x;
+        const dy = event.clientY - gesture.y;
+        if (dx * dx + dy * dy < 14 * 14) return;
+        _right.setFromMatrixColumn(camera.matrixWorld, 0);
+        _up.setFromMatrixColumn(camera.matrixWorld, 1);
+        _drag.copy(_right).multiplyScalar(dx).addScaledVector(_up, -dy);
+        const move = decideTurn(gesture.normal, { x: gesture.px, y: gesture.py, z: gesture.pz }, _drag);
+        if (!move) return;
+        gesture = null;
+        useCube.getState().enqueue([move]);
+        return;
+      }
+      if (orbit && event.pointerId === orbit.pointerId) {
+        useView.getState().nudge(event.clientX - orbit.x, event.clientY - orbit.y, height());
+        orbit.x = event.clientX;
+        orbit.y = event.clientY;
+      }
     };
 
     const onUp = (event: PointerEvent) => {
-      if (!gesture || event.pointerId !== gesture.pointerId) return;
-      gesture = null;
-      const ctrl = orbit();
-      if (ctrl) ctrl.enabled = true;
+      pointers.delete(event.pointerId);
+      if (gesture?.pointerId === event.pointerId) gesture = null;
+      if (orbit?.pointerId === event.pointerId) orbit = null;
+      if (pointers.size < 2) pair = null;
+      if (pointers.size >= 2) pair = midpoint();
     };
 
     element.addEventListener("pointerdown", onDown, true);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     return () => {
       element.removeEventListener("pointerdown", onDown, true);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     };
-  }, [camera, controls, gl]);
+  }, [camera, gl]);
 
   return <group ref={root} />;
 }
