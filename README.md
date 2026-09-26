@@ -1,5 +1,7 @@
 # rubiks-cube-solver
 
+**[Open Quarter](https://nyanpiggle.github.io/rubiks-cube-solver/)** — the cube, in the browser. No install.
+
 Two ways to unscramble a 3×3.
 
 ## Quarter
