@@ -12,7 +12,7 @@ A card opens, in order:
 2. otherwise `https://nyanpiggle.github.io/<repo>/` when GitHub Pages is on
 3. otherwise the GitHub repo, which is the source, not the app
 
-A change to an app is not finished when its source branch moves. The same turn must update the URL that card opens, then confirm the live page is the new one. Do not clear Homepage, turn Pages off, or make the repo private if it should stay on the phone. Repos do not all publish the same way. Use the section for this repo. Copy this phone section into `AGENTS.md` and `CLAUDE.md` on any new project.
+A change to an app is not finished when its source branch moves. The same turn must update the URL that card opens, then confirm the live page is the new one. Do not clear Homepage, turn Pages off, or make the repo private if it should stay on the phone. Repos do not all publish the same way. Use the section for this repo. Copy this phone section into `AGENTS.md` and `CLAUDE.md` on any new project. Setting up a new repo is not done until that repo is on the phone: make it public, publish the URL the card opens, and confirm the live hub lists it. Leave a repo off the phone only when the user said to keep it private.
 
 ## What this repo is
 
